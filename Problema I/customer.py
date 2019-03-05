@@ -26,6 +26,7 @@ class Customer:
         self.tiempo_llegada_cola = -1
         self.tiempo_salida_cola = -1
         self.tiempo_atencion = -1
+        self.tiempo_en_el_lugar = -1
         self.servidor = -1
         self.id = id
 

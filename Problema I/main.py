@@ -2,6 +2,8 @@
 Script que corre la simulacion del problema
 '''
 import random
+import math
+from scipy import stats
 
 from queue import Queue
 from customer import Customer
@@ -10,10 +12,9 @@ from servidores import Servidores
 cola = Queue()
 cajeros = Servidores(4)
 tiempo_sistema = 0
-
-# Este diccionario contiene informacion sobre el
-# estado del sistema
-
+tiempo_libre_promedio = 0
+tiempo_liberacion = 0
+tiempo_reserva = 0
 
 def actualizar_estado(long_cola, servidores_disponibles, tiempo_sistema):
     '''
@@ -73,11 +74,14 @@ for time in linea_tiempo.keys():
                 centinela = cliente
         if centinela.tiempo_atencion <= time and centinela.id != -1:
             cajeros.liberar_servidor(centinela)
+            tiempo_liberacion = centinela.tiempo_atencion
             clientes_servidores = eliminar_cliente(centinela, clientes_servidores)
         if cola.length() > 0 and cajeros.existe_servidor_libre():
             siguiente = cola.dequeue()
             cajeros.reservar_servidor(siguiente)
+            tiempo_reserva = centinela.tiempo_atencion 
             siguiente.tiempo_salida_cola = centinela.tiempo_atencion
+            tiempo_libre_promedio += (-tiempo_reserva + tiempo_liberacion)
             siguiente.tiempo_atencion = siguiente.tiempo_salida_cola + random.uniform(3,5)
             clientes_servidores.append(siguiente)
         else:
@@ -89,6 +93,7 @@ for time in linea_tiempo.keys():
 
     if cola.length() == 0:
         if cajeros.reservar_servidor(cliente):
+            tiempo_libre_promedio += (-tiempo_reserva + tiempo_liberacion)
             cliente.tiempo_salida_cola = time
             cliente.tiempo_atencion = cliente.tiempo_salida_cola + random.uniform(3,5)
             clientes_servidores.append(cliente)
@@ -132,12 +137,37 @@ for i in linea_tiempo.keys():
         print(linea_tiempo[i])
 
 print("-----------------------------------------------------------------")
-print(" % De clientes que se rindieron: " + str(clientes_declinaron*100/cantidad_clientes))
 promedio = 0
+s = 0
 for i in linea_tiempo.values():
     if i.tiempo_salida_cola != -1:
-        promedio += (i.tiempo_atencion - i.tiempo_llegada_cola)
+        i.tiempo_en_el_lugar = i.tiempo_atencion - i.tiempo_llegada_cola
+        promedio += (i.tiempo_en_el_lugar)
 
-promedio /= cantidad_clientes   
+promedio /= cantidad_clientes 
+tiempo_libre_promedio /= 4
 
-print(" Tiempo de espera para un cliente: " + str(promedio))
+for i in linea_tiempo.values():
+    if i.tiempo_salida_cola != -1:
+        s += ((i.tiempo_en_el_lugar - promedio)**2)
+
+def calc_intervalo(s, promedio, nivel_sign, n):
+    '''
+    Funcion que calcula los intervalos de
+    confianza
+    '''
+    t_value = stats.t.ppf(1-nivel_sign, grados_libertad)
+    delta = t_value*(s / math.sqrt(n))
+    return "[" + str(round(promedio - delta, 2)) + ", " + str(round(promedio + delta, 2)) + "]" 
+
+
+s = math.sqrt(s / (cantidad_clientes - 1))
+grados_libertad = cantidad_clientes - 1
+nivel_sign = 0.05
+intervalo = calc_intervalo(s, promedio, nivel_sign, cantidad_clientes)
+
+print(" a) Tiempo de espera para un cliente: " + str(promedio))
+print("    Calculo del intervalo de confianza de 95%: " + intervalo)
+print("-------------------------------------------------------------------------")
+print(" b) % De clientes que se rindieron: " + str(clientes_declinaron*100/cantidad_clientes))
+print(" c) El promedio de tiempo libre de un cajero es: " + str(round(tiempo_libre_promedio, 2)))
