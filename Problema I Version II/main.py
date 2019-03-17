@@ -179,7 +179,7 @@ def simulacion(minutos, cant_clientes):
     return servidores, clientes_listos, clientes_se_rindieron
 
 cant_clientes = 100
-minutos = 60
+minutos = 420
 servidores, clientes, cant_declinados = simulacion(minutos, cant_clientes)
 
 
@@ -244,3 +244,84 @@ print("Para el cajero 3: " + str(round(porcentaje_cajero_3, 2)) + "%")
 print("Para el cajero 4: " + str(round(porcentaje_cajero_4, 2)) + "%")
 print("Tiempo libre promedio de un cajero: " + str(round(promedio_tiempo_libre, 2)))
 print("Intervalo de confianza: " + intervalo_confianza)
+
+iteraciones = 1000
+vueltas = 0
+promedio_declina = 0 
+cant_declinados_por_iteracion = []
+promedio_tiempo_libre_a = 0 
+promedio_tiempo_libre_b = 0 
+promedio_tiempo_libre_c = 0 
+promedio_tiempo_libre_d = 0
+
+tiempo_libre_cajero_a = []
+tiempo_libre_cajero_b = []
+tiempo_libre_cajero_c = []
+tiempo_libre_cajero_d = []
+
+while vueltas < iteraciones:
+    servidores, clientes, cant_declinados = simulacion(minutos, cant_clientes)
+    promedio_declina += cant_declinados
+    vueltas += 1
+    cant_declinados_por_iteracion.append(cant_declinados)
+    tiempo_libre_cajero_a.append(servidores.lista_cajeros[0].tiempo_libre)
+    tiempo_libre_cajero_b.append(servidores.lista_cajeros[1].tiempo_libre)
+    tiempo_libre_cajero_c.append(servidores.lista_cajeros[2].tiempo_libre)
+    tiempo_libre_cajero_d.append(servidores.lista_cajeros[3].tiempo_libre)
+
+    promedio_tiempo_libre_a += servidores.lista_cajeros[0].tiempo_libre
+    promedio_tiempo_libre_b += servidores.lista_cajeros[1].tiempo_libre
+    promedio_tiempo_libre_c += servidores.lista_cajeros[2].tiempo_libre
+    promedio_tiempo_libre_d += servidores.lista_cajeros[3].tiempo_libre
+
+promedio_declina /= iteraciones
+# Desviacion estandar
+s = 0
+for cantidad in cant_declinados_por_iteracion:
+    s += (cantidad - promedio_declina)**2
+
+s = sqrt(s / (iteraciones - 1))
+t_valor = stats.t.ppf(1-0.05, iteraciones - 1)
+delta = t_valor*(s / sqrt(iteraciones))
+
+
+intervalo_confianza = "[" + str(promedio_declina - delta) + ", " + str(promedio_declina + delta) + "]"
+
+print("Promedio de clientes que declinaron: " + str(promedio_declina))
+print("Intervalo de confianza: " + intervalo_confianza)
+print("----------------------------------------------------------------")
+
+def get_intervalo(promedio, delta):
+    return "[" + str(promedio - delta) + ", " + str(promedio + delta) + "]"
+
+def print_resultado(promedio, intervalo, msg):
+    print("Promedio de " + msg + ": " + str(promedio_declina))
+    print("Intervalo de confianza: " + intervalo_confianza)
+    print("----------------------------------------------------------------")
+
+promedio_tiempo_libre_a /= iteraciones 
+
+s1 = sum((x - promedio_tiempo_libre_a) for x in tiempo_libre_cajero_a)
+delta = t_valor*(s1 / sqrt(iteraciones))
+print_resultado(promedio_tiempo_libre_a, get_intervalo(promedio_tiempo_libre_a, delta), "tiempo libre a")
+
+promedio_tiempo_libre_b /= iteraciones 
+s2 = sum((x - promedio_tiempo_libre_b) for x in tiempo_libre_cajero_b)
+delta = t_valor*(s2 / sqrt(iteraciones))
+print_resultado(promedio_tiempo_libre_b, get_intervalo(promedio_tiempo_libre_b, delta), "tiempo libre a")
+
+
+promedio_tiempo_libre_c /= iteraciones 
+s3 = sum((x - promedio_tiempo_libre_c) for x in tiempo_libre_cajero_c)
+delta = t_valor*(s3 / sqrt(iteraciones))
+print_resultado(promedio_tiempo_libre_c, get_intervalo(promedio_tiempo_libre_c, delta), "tiempo libre a")
+
+
+promedio_tiempo_libre_d /= iteraciones 
+s4 = sum((x - promedio_tiempo_libre_d) for x in tiempo_libre_cajero_d)
+delta = t_valor*(s4 / sqrt(iteraciones))
+print_resultado(promedio_tiempo_libre_d, get_intervalo(promedio_tiempo_libre_d, delta), "tiempo libre a")
+
+
+
+
